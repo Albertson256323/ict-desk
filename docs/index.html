@@ -3,14 +3,116 @@
 <head>
 <meta charset="UTF-8">
 <title>Displacement Desk — ICT Engine</title>
+<meta http-equiv="refresh" content="120">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-    body { margin: 0; background: #0B0D10; color: #E7E5E0; font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif; padding: 40px 18px; text-align: center; }
-    p { color: #8A8F98; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+    :root {
+        --bg: #0B0D10; --surface: #14171B; --surface-alt: #1B1F24; --line: #262B31;
+        --text: #E7E5E0; --text-muted: #8A8F98; --accent: #D4A24C;
+        --long: #4F9C7C; --short: #C1554A; --loss: #C1554A;
+    }
+    * { box-sizing: border-box; }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    body {
+        margin: 0; background: var(--bg); color: var(--text);
+        font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif;
+        padding: 18px; max-width: 960px; margin-inline: auto;
+    }
+    .mono, .stat-value, .ladder-labels span, td.mono {
+        font-family: 'IBM Plex Mono', 'Menlo', monospace; font-variant-numeric: tabular-nums;
+    }
+    header.masthead {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 18px;
+    }
+    .masthead-title { font-weight: 600; font-size: 22px; letter-spacing: 0.02em; margin: 0; }
+    .masthead-sub { color: var(--text-muted); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; margin-top: 4px; }
+    .status-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; letter-spacing: 0.05em; color: var(--long); text-transform: uppercase; }
+    .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--long); animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(79,156,124,0.55); } 70% { box-shadow: 0 0 0 6px rgba(79,156,124,0); } 100% { box-shadow: 0 0 0 0 rgba(79,156,124,0); } }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
+    .stat-tile { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+    .stat-value { font-size: 18px; font-weight: 600; }
+    .stat-label { font-size: 10.5px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+    section.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin-bottom: 18px; }
+    .panel-title { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+    .panel-title h2 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin: 0; font-weight: 600; }
+    .panel-title .count { font-size: 12px; color: var(--text-muted); }
+    .trade-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+    .trade-card { background: var(--surface-alt); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+    .trade-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+    .ticker { font-weight: 600; font-size: 14px; }
+    .dir-tag { font-size: 10px; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+    .dir-long { background: rgba(79,156,124,0.15); color: var(--long); }
+    .dir-short { background: rgba(193,85,74,0.15); color: var(--short); }
+    .rr-tag { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+    .ladder { position: relative; height: 6px; margin: 10px 2px 6px; }
+    .ladder-track { position: absolute; top: 50%; left: 0; right: 0; height: 3px; transform: translateY(-50%); background: linear-gradient(90deg, var(--short), var(--line) 45%, var(--line) 55%, var(--long)); border-radius: 2px; opacity: 0.55; }
+    .ladder-marker { position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%); }
+    .ladder-marker.entry { background: var(--text); border: 2px solid var(--surface-alt); }
+    .ladder-marker.price { background: var(--accent); box-shadow: 0 0 0 3px rgba(212,162,76,0.25); }
+    .ladder-labels { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-muted); }
+    .ladder-labels .lbl-entry { color: var(--text); }
+    .trade-card-foot { margin-top: 10px; font-size: 10.5px; color: var(--text-muted); }
+    .empty-state { color: var(--text-muted); font-size: 13px; padding: 10px 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    .ticker-cell { font-weight: 600; }
+    .rationale { color: var(--text-muted); }
+    .empty-cell { color: var(--text-muted); text-align: center; padding: 20px; }
+    .pill { font-size: 10.5px; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+    .pill-win { background: rgba(79,156,124,0.15); color: var(--long); }
+    .pill-loss { background: rgba(193,85,74,0.15); color: var(--loss); }
+    .pill-open { background: rgba(212,162,76,0.15); color: var(--accent); }
+    footer { color: var(--text-muted); font-size: 11px; text-align: center; padding-top: 8px; }
 </style>
 </head>
 <body>
-    <h1>Displacement Desk</h1>
-    <p>Waiting for the first scheduled scan to run.</p>
+    <header class="masthead">
+        <div>
+            <p class="masthead-title">Displacement Desk</p>
+            <p class="masthead-sub">15m structural displacement · FVG · H4 confirmation</p>
+        </div>
+        <span class="status-pill"><span class="pulse-dot"></span>Scheduled scan</span>
+    </header>
+
+    <div class="stat-grid">
+        <div class="stat-tile">
+            <span class="stat-value">2026-07-31 22:22:36 UTC</span>
+            <span class="stat-label">LAST SCAN</span>
+        </div>
+        
+        <div class="stat-tile">
+            <span class="stat-value">0</span>
+            <span class="stat-label">OPEN POSITIONS</span>
+        </div>
+        
+        <div class="stat-tile">
+            <span class="stat-value">0</span>
+            <span class="stat-label">CLOSED TRADES</span>
+        </div>
+        
+        <div class="stat-tile">
+            <span class="stat-value">0.0%</span>
+            <span class="stat-label">WIN RATE</span>
+        </div>
+        </div>
+
+    <section class="panel">
+        <div class="panel-title"><h2>Active Setups</h2><span class="count">0 open</span></div>
+        <p class="empty-state">No setups currently open. Next scheduled scan will check again.</p>
+    </section>
+
+    <section class="panel">
+        <div class="panel-title"><h2>Trade Journal</h2><span class="count">last 0 of 0</span></div>
+        <table>
+            <tr><th>Time</th><th>Asset</th><th>Type</th><th>Entry</th><th>Outcome</th><th>Rationale</th></tr>
+            <tr><td colspan="6" class="empty-cell">No trades logged yet.</td></tr>
+        </table>
+    </section>
+
+    <footer>Updated on each scheduled scan (roughly every 15–30 min) · paper-trading simulation, no live orders placed</footer>
 </body>
 </html>
