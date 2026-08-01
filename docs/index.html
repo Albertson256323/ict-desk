@@ -79,8 +79,9 @@
     </header>
 
     <div class="stat-grid">
+        
         <div class="stat-tile">
-            <span class="stat-value">2026-08-01 04:07:00 UTC</span>
+            <span class="stat-value">2026-08-01 04:47:47 UTC</span>
             <span class="stat-label">LAST SCAN</span>
         </div>
         
@@ -98,7 +99,12 @@
             <span class="stat-value">0.0%</span>
             <span class="stat-label">WIN RATE</span>
         </div>
+        
+        <div class="stat-tile">
+            <span class="stat-value mono" id="countdown">--:--</span>
+            <span class="stat-label">NEXT SCAN (EST.)</span>
         </div>
+    </div>
 
     <section class="panel">
         <div class="panel-title"><h2>Active Setups</h2><span class="count">0 open</span></div>
@@ -114,5 +120,28 @@
     </section>
 
     <footer>Updated on each scheduled scan (roughly every 15–30 min) · paper-trading simulation, no live orders placed</footer>
+
+    <script>
+    (function() {
+        var lastScan = new Date("2026-08-01T04:47:47Z");
+        var intervalMs = 15 * 60 * 1000; // matches the cron schedule in scan.yml
+        var el = document.getElementById('countdown');
+        if (!el || isNaN(lastScan.getTime())) return;
+
+        function tick() {
+            var target = new Date(lastScan.getTime() + intervalMs);
+            var diff = target - new Date();
+            if (diff <= 0) {
+                el.textContent = "due now";
+                return;
+            }
+            var mins = Math.floor(diff / 60000);
+            var secs = Math.floor((diff % 60000) / 1000);
+            el.textContent = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+        }
+        tick();
+        setInterval(tick, 1000);
+    })();
+    </script>
 </body>
 </html>
