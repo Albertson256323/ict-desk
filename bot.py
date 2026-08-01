@@ -61,9 +61,14 @@ def read_journal():
     return rows
 
 
+SCAN_INTERVAL_SECONDS = 15 * 60  # matches the cron schedule in scan.yml
+
+
 def run_scan_cycle():
     active_trades = load_state()
-    current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime()) + ' UTC'
+    now_epoch = time.time()
+    current_time = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(now_epoch)) + ' UTC'
+    current_time_iso = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime(now_epoch))
 
     for symbol in symbols:
         if symbol in active_trades:
@@ -97,7 +102,25 @@ def run_scan_cycle():
                 if risk_distance <= 0:
                     continue
 
-                take_profit = fvg_entry + (risk_distance * 6)
+                # Target the most recent swing high instead of an arbitrary
+                # fixed multiple — a real liquidity level price would
+                # plausibly run to, rather than a made-up number. Only take
+                # the trade if that realistic target still clears a minimum
+                # 1:3 reward-to-risk; if the structure doesn't offer at
+                # least that, the setup is skipped rather than forcing a
+                # target that isn't actually there.
+                MIN_RR = 3.0
+                swing_high = df_15['high'].iloc[:-1].max()
+                reward_distance = swing_high - fvg_entry
+
+                if reward_distance <= 0:
+                    continue
+
+                rr = reward_distance / risk_distance
+                if rr < MIN_RR:
+                    continue
+
+                take_profit = swing_high
 
                 active_trades[symbol] = {
                     'type': 'LONG',
@@ -107,7 +130,7 @@ def run_scan_cycle():
                     'last_price': fvg_entry,
                     'last_check': current_time,
                 }
-                rationale = "15m structural displacement with verified FVG, confirmed by bullish H4 context."
+                rationale = f"15m structural displacement with verified FVG, confirmed by bullish H4 context. Target: recent swing high, R:R 1:{rr:.1f}."
                 log_to_journal(current_time, symbol, 'LONG', fvg_entry, stop_loss, take_profit, 'OPEN', rationale)
 
         except Exception:
@@ -133,7 +156,7 @@ def run_scan_cycle():
             traceback.print_exc()
 
     save_state(active_trades)
-    return active_trades, current_time
+    return active_trades, current_time, current_time_iso
 
 
 def fmt(n, decimals=4):
@@ -307,7 +330,13 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
         <span class="status-pill"><span class="pulse-dot"></span>Scheduled scan</span>
     </header>
 
-    <div class="stat-grid">{stat_tiles}</div>
+    <div class="stat-grid">
+        {stat_tiles}
+        <div class="stat-tile">
+            <span class="stat-value mono" id="countdown">--:--</span>
+            <span class="stat-label">NEXT SCAN (EST.)</span>
+        </div>
+    </div>
 
     <section class="panel">
         <div class="panel-title"><h2>Active Setups</h2><span class="count">{open_count} open</span></div>
@@ -323,12 +352,35 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     </section>
 
     <footer>Updated on each scheduled scan (roughly every 15–30 min) · paper-trading simulation, no live orders placed</footer>
+
+    <script>
+    (function() {{
+        var lastScan = new Date("{last_scan_iso}");
+        var intervalMs = 15 * 60 * 1000; // matches the cron schedule in scan.yml
+        var el = document.getElementById('countdown');
+        if (!el || isNaN(lastScan.getTime())) return;
+
+        function tick() {{
+            var target = new Date(lastScan.getTime() + intervalMs);
+            var diff = target - new Date();
+            if (diff <= 0) {{
+                el.textContent = "due now";
+                return;
+            }}
+            var mins = Math.floor(diff / 60000);
+            var secs = Math.floor((diff % 60000) / 1000);
+            el.textContent = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+        }}
+        tick();
+        setInterval(tick, 1000);
+    }})();
+    </script>
 </body>
 </html>
 """
 
 
-def render_dashboard(active_trades, last_scan):
+def render_dashboard(active_trades, last_scan, last_scan_iso):
     logs = read_journal()
     wins = sum(1 for log in logs if log['Outcome'] == 'WIN')
     closed_count = sum(1 for log in logs if log['Outcome'] in ('WIN', 'LOSS'))
@@ -348,6 +400,7 @@ def render_dashboard(active_trades, last_scan):
         shown_count=len(shown),
         total_count=len(logs),
         journal_rows=build_journal_rows(shown),
+        last_scan_iso=last_scan_iso,
     )
 
     os.makedirs(os.path.dirname(DASHBOARD_FILE), exist_ok=True)
@@ -356,6 +409,6 @@ def render_dashboard(active_trades, last_scan):
 
 
 if __name__ == '__main__':
-    trades, scan_time = run_scan_cycle()
-    render_dashboard(trades, scan_time)
+    trades, scan_time, scan_time_iso = run_scan_cycle()
+    render_dashboard(trades, scan_time, scan_time_iso)
     print(f"Scan complete at {scan_time}. Open positions: {len(trades)}.")
