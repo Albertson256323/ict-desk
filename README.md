@@ -37,3 +37,4 @@ fully offline.
   real API keys or credentials to this repo.
 - GitHub's schedule isn't second-precise; runs can be delayed a few minutes
   during platform load, same as the ~15 min gap you already had.
+.
