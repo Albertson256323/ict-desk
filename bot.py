@@ -10,6 +10,7 @@ import pandas as pd
 STATE_FILE = 'state.json'
 JOURNAL_FILE = 'trading_journal.csv'
 DASHBOARD_FILE = 'docs/index.html'
+HISTORY_FILE = 'docs/history.html'
 
 exchange = ccxt.okx({
     'options': {'defaultType': 'swap'},
@@ -61,7 +62,7 @@ def read_journal():
     return rows
 
 
-SCAN_INTERVAL_SECONDS = 15 * 60  # matches the cron schedule in scan.yml
+SCAN_INTERVAL_SECONDS = 15 * 60
 
 
 def run_scan_cycle():
@@ -210,9 +211,9 @@ def build_trade_card(symbol, trade):
     """
 
 
-def build_journal_rows(logs_snapshot):
+def build_journal_rows(logs_snapshot, empty_message="No trades logged yet. The first one will appear here the moment a setup opens."):
     if not logs_snapshot:
-        return '<tr><td colspan="6" class="empty-cell">No trades logged yet. The first one will appear here the moment a setup opens.</td></tr>'
+        return f'<tr><td colspan="6" class="empty-cell">{empty_message}</td></tr>'
 
     rows = ""
     for log in logs_snapshot:
@@ -291,6 +292,17 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     }}
     .pulse-dot {{ width: 6px; height: 6px; border-radius: 50%; background: var(--win); animation: pulse 2s infinite; flex-shrink: 0; }}
     @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(127,182,158,0.55); }} 70% {{ box-shadow: 0 0 0 6px rgba(127,182,158,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(127,182,158,0); }} }}
+
+    .site-nav {{ display: flex; gap: 18px; margin-top: 16px; border-top: 1px dashed var(--rule); padding-top: 12px; }}
+    .nav-link {{
+        font-size: 12px; letter-spacing: 0.04em; text-decoration: none;
+        color: var(--chalk-dim); padding-bottom: 3px; border-bottom: 2px solid transparent;
+    }}
+    .nav-link.active {{ color: var(--marigold); border-bottom-color: var(--marigold); }}
+    .view-all-link {{
+        display: inline-block; margin-top: 12px; font-size: 12px; color: var(--marigold);
+        text-decoration: none; letter-spacing: 0.02em;
+    }}
 
     .stat-strip {{
         display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
@@ -379,6 +391,11 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
             </div>
             <span class="status-pill"><span class="pulse-dot"></span>Live</span>
         </div>
+        <nav class="site-nav">
+            <a class="nav-link active" href="index.html">Overview</a>
+            <a class="nav-link" href="history.html">Full History</a>
+            <a class="nav-link" href="about.html">About</a>
+        </nav>
     </header>
 
     <div class="stat-strip">
@@ -400,6 +417,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
             <tr><th>Time</th><th>Asset</th><th>Type</th><th>Entry</th><th>Outcome</th><th>Rationale</th></tr>
             {journal_rows}
         </table>
+        <a class="view-all-link" href="history.html">View full history →</a>
     </section>
 
     <footer>Updated on each scheduled scan, roughly every 15 min · paper-trading simulation only — no live orders placed</footer>
@@ -407,7 +425,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     <script>
     (function() {{
         var lastScan = new Date("{last_scan_iso}");
-        var intervalMs = 15 * 60 * 1000; // matches the cron trigger interval
+        var intervalMs = 15 * 60 * 1000;
         var el = document.getElementById('countdown');
         if (!el || isNaN(lastScan.getTime())) return;
 
@@ -426,6 +444,97 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
         setInterval(tick, 1000);
     }})();
     </script>
+</body>
+</html>
+"""
+
+
+HISTORY_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Full History — Displacement Desk</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {{
+        --ink: #12201C; --panel: #1A2B24; --panel-raised: #22362C; --rule: #2E4238;
+        --chalk: #EDEAE0; --chalk-dim: #8FA79B;
+        --marigold: #E0A458; --win: #7FB69E; --loss: #D9836F;
+    }}
+    * {{ box-sizing: border-box; }}
+    @media (prefers-reduced-motion: reduce) {{ * {{ animation: none !important; transition: none !important; }} }}
+    body {{
+        margin: 0; background: var(--ink); color: var(--chalk);
+        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+        padding: 20px 16px 32px; max-width: 720px; margin-inline: auto;
+        -webkit-font-smoothing: antialiased;
+    }}
+    .mono {{ font-family: 'IBM Plex Mono', 'Menlo', monospace; font-variant-numeric: tabular-nums; }}
+    header.masthead {{ padding-bottom: 16px; margin-bottom: 22px; }}
+    .masthead-title {{
+        font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 25px;
+        letter-spacing: -0.01em; margin: 0; color: var(--chalk);
+    }}
+    .masthead-rule {{ height: 3px; width: 46px; background: var(--marigold); border-radius: 2px; margin-top: 9px; }}
+    .masthead-sub {{ color: var(--chalk-dim); font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 8px; }}
+    .site-nav {{ display: flex; gap: 18px; margin-top: 16px; border-top: 1px dashed var(--rule); padding-top: 12px; }}
+    .nav-link {{
+        font-size: 12px; letter-spacing: 0.04em; text-decoration: none;
+        color: var(--chalk-dim); padding-bottom: 3px; border-bottom: 2px solid transparent;
+    }}
+    .nav-link.active {{ color: var(--marigold); border-bottom-color: var(--marigold); }}
+    section.panel {{
+        background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+        padding: 18px 16px; margin-bottom: 18px;
+    }}
+    .panel-title {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }}
+    .panel-title h2 {{
+        font-family: 'Space Grotesk', sans-serif; font-size: 13px; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--chalk-dim); margin: 0; font-weight: 600;
+    }}
+    .panel-title .count {{ font-size: 12px; color: var(--chalk-dim); }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 12.5px; }}
+    th {{
+        text-align: left; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+        color: var(--chalk-dim); font-weight: 600; padding: 8px 8px; border-bottom: 1px solid var(--rule);
+    }}
+    td {{ padding: 10px 8px; border-bottom: 1px dashed var(--rule); vertical-align: top; }}
+    tr:last-child td {{ border-bottom: none; }}
+    tr:nth-child(even) td {{ background: rgba(255,255,255,0.015); }}
+    .ticker-cell {{ font-weight: 600; }}
+    .rationale {{ color: var(--chalk-dim); }}
+    .empty-cell {{ color: var(--chalk-dim); text-align: center; padding: 26px 10px; line-height: 1.6; }}
+    .pill {{ font-size: 10px; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 20px; font-weight: 600; white-space: nowrap; }}
+    .pill-win {{ background: rgba(127,182,158,0.16); color: var(--win); }}
+    .pill-loss {{ background: rgba(217,131,111,0.16); color: var(--loss); }}
+    .pill-open {{ background: rgba(224,164,88,0.16); color: var(--marigold); }}
+    footer {{ color: var(--chalk-dim); font-size: 10.5px; text-align: center; padding-top: 10px; line-height: 1.6; }}
+</style>
+</head>
+<body>
+    <header class="masthead">
+        <p class="masthead-title">Full History</p>
+        <div class="masthead-rule"></div>
+        <p class="masthead-sub">Every trade this bot has logged, oldest to newest reversed</p>
+        <nav class="site-nav">
+            <a class="nav-link" href="index.html">Overview</a>
+            <a class="nav-link active" href="history.html">Full History</a>
+            <a class="nav-link" href="about.html">About</a>
+        </nav>
+    </header>
+
+    <section class="panel">
+        <div class="panel-title"><h2>All trades</h2><span class="count">{total_count} total</span></div>
+        <table>
+            <tr><th>Time</th><th>Asset</th><th>Type</th><th>Entry</th><th>Outcome</th><th>Rationale</th></tr>
+            {journal_rows}
+        </table>
+    </section>
+
+    <footer>This page regenerates on every scheduled scan alongside the overview.</footer>
 </body>
 </html>
 """
@@ -456,6 +565,18 @@ def render_dashboard(active_trades, last_scan, last_scan_iso):
 
     os.makedirs(os.path.dirname(DASHBOARD_FILE), exist_ok=True)
     with open(DASHBOARD_FILE, 'w', encoding='utf-8') as f:
+        f.write(html)
+
+    render_history(logs)
+
+
+def render_history(logs):
+    html = HISTORY_TEMPLATE.format(
+        total_count=len(logs),
+        journal_rows=build_journal_rows(logs, empty_message="No trades logged yet."),
+    )
+    os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+    with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
         f.write(html)
 
 
