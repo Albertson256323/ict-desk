@@ -41,6 +41,17 @@
     .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--win); animation: pulse 2s infinite; flex-shrink: 0; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(127,182,158,0.55); } 70% { box-shadow: 0 0 0 6px rgba(127,182,158,0); } 100% { box-shadow: 0 0 0 0 rgba(127,182,158,0); } }
 
+    .site-nav { display: flex; gap: 18px; margin-top: 16px; border-top: 1px dashed var(--rule); padding-top: 12px; }
+    .nav-link {
+        font-size: 12px; letter-spacing: 0.04em; text-decoration: none;
+        color: var(--chalk-dim); padding-bottom: 3px; border-bottom: 2px solid transparent;
+    }
+    .nav-link.active { color: var(--marigold); border-bottom-color: var(--marigold); }
+    .view-all-link {
+        display: inline-block; margin-top: 12px; font-size: 12px; color: var(--marigold);
+        text-decoration: none; letter-spacing: 0.02em;
+    }
+
     .stat-strip {
         display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
         background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
@@ -128,12 +139,17 @@
             </div>
             <span class="status-pill"><span class="pulse-dot"></span>Live</span>
         </div>
+        <nav class="site-nav">
+            <a class="nav-link active" href="index.html">Overview</a>
+            <a class="nav-link" href="history.html">Full History</a>
+            <a class="nav-link" href="about.html">About</a>
+        </nav>
     </header>
 
     <div class="stat-strip">
         
         <div class="stat-tile">
-            <span class="stat-value">2026-08-02 13:45:34 UTC</span>
+            <span class="stat-value">2026-08-02 14:00:28 UTC</span>
             <span class="stat-label">LAST SCAN</span>
         </div>
         
@@ -169,14 +185,15 @@
             <tr><th>Time</th><th>Asset</th><th>Type</th><th>Entry</th><th>Outcome</th><th>Rationale</th></tr>
             <tr><td colspan="6" class="empty-cell">No trades logged yet. The first one will appear here the moment a setup opens.</td></tr>
         </table>
+        <a class="view-all-link" href="history.html">View full history →</a>
     </section>
 
     <footer>Updated on each scheduled scan, roughly every 15 min · paper-trading simulation only — no live orders placed</footer>
 
     <script>
     (function() {
-        var lastScan = new Date("2026-08-02T13:45:34Z");
-        var intervalMs = 15 * 60 * 1000; // matches the cron trigger interval
+        var lastScan = new Date("2026-08-02T14:00:28Z");
+        var intervalMs = 15 * 60 * 1000;
         var el = document.getElementById('countdown');
         if (!el || isNaN(lastScan.getTime())) return;
 
