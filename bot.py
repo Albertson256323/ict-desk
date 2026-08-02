@@ -102,13 +102,6 @@ def run_scan_cycle():
                 if risk_distance <= 0:
                     continue
 
-                # Target the most recent swing high instead of an arbitrary
-                # fixed multiple — a real liquidity level price would
-                # plausibly run to, rather than a made-up number. Only take
-                # the trade if that realistic target still clears a minimum
-                # 1:3 reward-to-risk; if the structure doesn't offer at
-                # least that, the setup is skipped rather than forcing a
-                # target that isn't actually there.
                 MIN_RR = 3.0
                 swing_high = df_15['high'].iloc[:-1].max()
                 reward_distance = swing_high - fvg_entry
@@ -189,6 +182,11 @@ def build_trade_card(symbol, trade):
     rr = (reward / risk) if risk else 0
     ticker = symbol.split('/')[0]
 
+    ticks = "".join(
+        f'<div class="ladder-tick" style="left:{p:.2f}%"></div>'
+        for p in (100 * i / 6 for i in range(1, 6))
+    )
+
     return f"""
     <div class="trade-card">
         <div class="trade-card-head">
@@ -198,13 +196,14 @@ def build_trade_card(symbol, trade):
         </div>
         <div class="ladder">
             <div class="ladder-track"></div>
+            {ticks}
             <div class="ladder-marker entry" style="left:{entry_pos:.2f}%" title="Entry {fmt(entry)}"></div>
             <div class="ladder-marker price" style="left:{price_pos:.2f}%" title="Last checked {fmt(last_price)}"></div>
         </div>
         <div class="ladder-labels">
-            <span class="lbl-sl">SL {fmt(sl)}</span>
-            <span class="lbl-entry">Entry {fmt(entry)}</span>
-            <span class="lbl-tp">TP {fmt(tp)}</span>
+            <span class="lbl-sl">SL<br>{fmt(sl)}</span>
+            <span class="lbl-entry">ENTRY<br>{fmt(entry)}</span>
+            <span class="lbl-tp">TP<br>{fmt(tp)}</span>
         </div>
         <div class="trade-card-foot">Last checked {last_check}</div>
     </div>
@@ -213,7 +212,7 @@ def build_trade_card(symbol, trade):
 
 def build_journal_rows(logs_snapshot):
     if not logs_snapshot:
-        return '<tr><td colspan="6" class="empty-cell">No trades logged yet.</td></tr>'
+        return '<tr><td colspan="6" class="empty-cell">No trades logged yet. The first one will appear here the moment a setup opens.</td></tr>'
 
     rows = ""
     for log in logs_snapshot:
@@ -257,106 +256,158 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <title>Displacement Desk — ICT Engine</title>
 <meta http-equiv="refresh" content="120">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
     :root {{
-        --bg: #0B0D10; --surface: #14171B; --surface-alt: #1B1F24; --line: #262B31;
-        --text: #E7E5E0; --text-muted: #8A8F98; --accent: #D4A24C;
-        --long: #4F9C7C; --short: #C1554A; --loss: #C1554A;
+        --ink: #12201C; --panel: #1A2B24; --panel-raised: #22362C; --rule: #2E4238;
+        --chalk: #EDEAE0; --chalk-dim: #8FA79B;
+        --marigold: #E0A458; --win: #7FB69E; --loss: #D9836F;
     }}
     * {{ box-sizing: border-box; }}
     @media (prefers-reduced-motion: reduce) {{ * {{ animation: none !important; transition: none !important; }} }}
     body {{
-        margin: 0; background: var(--bg); color: var(--text);
-        font-family: 'IBM Plex Sans', 'Inter', system-ui, sans-serif;
-        padding: 18px; max-width: 960px; margin-inline: auto;
+        margin: 0; background: var(--ink); color: var(--chalk);
+        font-family: 'IBM Plex Sans', system-ui, sans-serif;
+        padding: 20px 16px 32px; max-width: 720px; margin-inline: auto;
+        -webkit-font-smoothing: antialiased;
     }}
     .mono, .stat-value, .ladder-labels span, td.mono {{
         font-family: 'IBM Plex Mono', 'Menlo', monospace; font-variant-numeric: tabular-nums;
     }}
-    header.masthead {{
-        display: flex; justify-content: space-between; align-items: flex-end;
-        border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 18px;
+
+    header.masthead {{ padding-bottom: 16px; margin-bottom: 22px; }}
+    .masthead-row {{ display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }}
+    .masthead-title {{
+        font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 25px;
+        letter-spacing: -0.01em; margin: 0; color: var(--chalk);
     }}
-    .masthead-title {{ font-weight: 600; font-size: 22px; letter-spacing: 0.02em; margin: 0; }}
-    .masthead-sub {{ color: var(--text-muted); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; margin-top: 4px; }}
-    .status-pill {{ display: inline-flex; align-items: center; gap: 7px; font-size: 12px; letter-spacing: 0.05em; color: var(--long); text-transform: uppercase; }}
-    .pulse-dot {{ width: 7px; height: 7px; border-radius: 50%; background: var(--long); animation: pulse 2s infinite; }}
-    @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(79,156,124,0.55); }} 70% {{ box-shadow: 0 0 0 6px rgba(79,156,124,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(79,156,124,0); }} }}
-    .stat-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 20px; }}
-    .stat-tile {{ background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }}
-    .stat-value {{ font-size: 18px; font-weight: 600; }}
-    .stat-label {{ font-size: 10.5px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }}
-    section.panel {{ background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin-bottom: 18px; }}
+    .masthead-rule {{ height: 3px; width: 46px; background: var(--marigold); border-radius: 2px; margin-top: 9px; }}
+    .masthead-sub {{ color: var(--chalk-dim); font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase; margin-top: 8px; }}
+    .status-pill {{
+        display: inline-flex; align-items: center; gap: 7px; font-size: 11px; letter-spacing: 0.08em;
+        color: var(--win); text-transform: uppercase; white-space: nowrap; margin-top: 2px;
+    }}
+    .pulse-dot {{ width: 6px; height: 6px; border-radius: 50%; background: var(--win); animation: pulse 2s infinite; flex-shrink: 0; }}
+    @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(127,182,158,0.55); }} 70% {{ box-shadow: 0 0 0 6px rgba(127,182,158,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(127,182,158,0); }} }}
+
+    .stat-strip {{
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+        background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+        margin-bottom: 22px; overflow: hidden;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.2) inset;
+    }}
+    .stat-tile {{
+        padding: 15px 16px; display: flex; flex-direction: column; gap: 5px;
+        border-right: 1px dashed var(--rule); border-bottom: 1px dashed var(--rule);
+    }}
+    .stat-tile:nth-child(3n) {{ border-right: none; }}
+    .stat-value {{ font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }}
+    .stat-label {{ font-size: 10px; color: var(--chalk-dim); letter-spacing: 0.09em; text-transform: uppercase; }}
+
+    section.panel {{
+        background: var(--panel); border: 1px solid var(--rule); border-radius: 10px;
+        padding: 18px 16px; margin-bottom: 18px;
+    }}
     .panel-title {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }}
-    .panel-title h2 {{ font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin: 0; font-weight: 600; }}
-    .panel-title .count {{ font-size: 12px; color: var(--text-muted); }}
-    .trade-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }}
-    .trade-card {{ background: var(--surface-alt); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }}
-    .trade-card-head {{ display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }}
-    .ticker {{ font-weight: 600; font-size: 14px; }}
-    .dir-tag {{ font-size: 10px; letter-spacing: 0.06em; padding: 2px 6px; border-radius: 3px; font-weight: 600; }}
-    .dir-long {{ background: rgba(79,156,124,0.15); color: var(--long); }}
-    .dir-short {{ background: rgba(193,85,74,0.15); color: var(--short); }}
-    .rr-tag {{ margin-left: auto; font-size: 11px; color: var(--text-muted); }}
-    .ladder {{ position: relative; height: 6px; margin: 10px 2px 6px; }}
-    .ladder-track {{ position: absolute; top: 50%; left: 0; right: 0; height: 3px; transform: translateY(-50%); background: linear-gradient(90deg, var(--short), var(--line) 45%, var(--line) 55%, var(--long)); border-radius: 2px; opacity: 0.55; }}
-    .ladder-marker {{ position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%; transform: translate(-50%, -50%); }}
-    .ladder-marker.entry {{ background: var(--text); border: 2px solid var(--surface-alt); }}
-    .ladder-marker.price {{ background: var(--accent); box-shadow: 0 0 0 3px rgba(212,162,76,0.25); }}
-    .ladder-labels {{ display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-muted); }}
-    .ladder-labels .lbl-entry {{ color: var(--text); }}
-    .trade-card-foot {{ margin-top: 10px; font-size: 10.5px; color: var(--text-muted); }}
-    .empty-state {{ color: var(--text-muted); font-size: 13px; padding: 10px 2px; }}
-    table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
-    th {{ text-align: left; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); }}
-    td {{ padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }}
+    .panel-title h2 {{
+        font-family: 'Space Grotesk', sans-serif; font-size: 13px; letter-spacing: 0.06em;
+        text-transform: uppercase; color: var(--chalk-dim); margin: 0; font-weight: 600;
+    }}
+    .panel-title .count {{ font-size: 12px; color: var(--chalk-dim); }}
+
+    .trade-grid {{ display: grid; gap: 12px; }}
+    .trade-card {{ background: var(--panel-raised); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; }}
+    .trade-card-head {{ display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }}
+    .ticker {{ font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; }}
+    .dir-tag {{ font-size: 10px; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 3px; font-weight: 600; }}
+    .dir-long {{ background: rgba(127,182,158,0.16); color: var(--win); }}
+    .dir-short {{ background: rgba(217,131,111,0.16); color: var(--loss); }}
+    .rr-tag {{ margin-left: auto; font-size: 11px; color: var(--chalk-dim); }}
+
+    .ladder {{ position: relative; height: 2px; margin: 0 4px 26px; background: var(--rule); border-radius: 1px; }}
+    .ladder-tick {{
+        position: absolute; top: -3px; width: 1px; height: 8px;
+        background: var(--rule); transform: translateX(-50%);
+    }}
+    .ladder-marker {{ position: absolute; top: 50%; transform: translate(-50%, -50%); }}
+    .ladder-marker.entry {{
+        width: 10px; height: 10px; border-radius: 50%;
+        background: var(--chalk); border: 2px solid var(--panel-raised);
+    }}
+    .ladder-marker.price {{
+        width: 10px; height: 10px; border-radius: 50%;
+        background: var(--marigold); box-shadow: 0 0 0 3px rgba(224,164,88,0.22);
+    }}
+    .ladder-labels {{ display: flex; justify-content: space-between; }}
+    .ladder-labels span {{
+        font-size: 10px; line-height: 1.5; color: var(--chalk-dim); letter-spacing: 0.03em;
+    }}
+    .ladder-labels .lbl-entry {{ color: var(--chalk); text-align: center; }}
+    .ladder-labels .lbl-tp {{ text-align: right; }}
+    .trade-card-foot {{ margin-top: 14px; font-size: 10.5px; color: var(--chalk-dim); }}
+
+    .empty-state {{ color: var(--chalk-dim); font-size: 13px; line-height: 1.6; padding: 4px 2px; }}
+
+    table {{ width: 100%; border-collapse: collapse; font-size: 12.5px; }}
+    th {{
+        text-align: left; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase;
+        color: var(--chalk-dim); font-weight: 600; padding: 8px 8px; border-bottom: 1px solid var(--rule);
+    }}
+    td {{ padding: 10px 8px; border-bottom: 1px dashed var(--rule); vertical-align: top; }}
     tr:last-child td {{ border-bottom: none; }}
+    tr:nth-child(even) td {{ background: rgba(255,255,255,0.015); }}
     .ticker-cell {{ font-weight: 600; }}
-    .rationale {{ color: var(--text-muted); }}
-    .empty-cell {{ color: var(--text-muted); text-align: center; padding: 20px; }}
-    .pill {{ font-size: 10.5px; letter-spacing: 0.05em; padding: 2px 8px; border-radius: 20px; font-weight: 600; }}
-    .pill-win {{ background: rgba(79,156,124,0.15); color: var(--long); }}
-    .pill-loss {{ background: rgba(193,85,74,0.15); color: var(--loss); }}
-    .pill-open {{ background: rgba(212,162,76,0.15); color: var(--accent); }}
-    footer {{ color: var(--text-muted); font-size: 11px; text-align: center; padding-top: 8px; }}
+    .rationale {{ color: var(--chalk-dim); }}
+    .empty-cell {{ color: var(--chalk-dim); text-align: center; padding: 26px 10px; line-height: 1.6; }}
+    .pill {{ font-size: 10px; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 20px; font-weight: 600; white-space: nowrap; }}
+    .pill-win {{ background: rgba(127,182,158,0.16); color: var(--win); }}
+    .pill-loss {{ background: rgba(217,131,111,0.16); color: var(--loss); }}
+    .pill-open {{ background: rgba(224,164,88,0.16); color: var(--marigold); }}
+
+    footer {{ color: var(--chalk-dim); font-size: 10.5px; text-align: center; padding-top: 10px; line-height: 1.6; }}
 </style>
 </head>
 <body>
     <header class="masthead">
-        <div>
-            <p class="masthead-title">Displacement Desk</p>
-            <p class="masthead-sub">15m structural displacement · FVG · H4 confirmation</p>
+        <div class="masthead-row">
+            <div>
+                <p class="masthead-title">Displacement Desk</p>
+                <div class="masthead-rule"></div>
+                <p class="masthead-sub">15m displacement · FVG · H4 bias · min 1:3 R:R</p>
+            </div>
+            <span class="status-pill"><span class="pulse-dot"></span>Live</span>
         </div>
-        <span class="status-pill"><span class="pulse-dot"></span>Scheduled scan</span>
     </header>
 
-    <div class="stat-grid">
+    <div class="stat-strip">
         {stat_tiles}
         <div class="stat-tile">
             <span class="stat-value mono" id="countdown">--:--</span>
-            <span class="stat-label">NEXT SCAN (EST.)</span>
+            <span class="stat-label">Next scan (est.)</span>
         </div>
     </div>
 
     <section class="panel">
-        <div class="panel-title"><h2>Active Setups</h2><span class="count">{open_count} open</span></div>
+        <div class="panel-title"><h2>Active setups</h2><span class="count">{open_count} open</span></div>
         {trades_html}
     </section>
 
     <section class="panel">
-        <div class="panel-title"><h2>Trade Journal</h2><span class="count">last {shown_count} of {total_count}</span></div>
+        <div class="panel-title"><h2>Trade journal</h2><span class="count">last {shown_count} of {total_count}</span></div>
         <table>
             <tr><th>Time</th><th>Asset</th><th>Type</th><th>Entry</th><th>Outcome</th><th>Rationale</th></tr>
             {journal_rows}
         </table>
     </section>
 
-    <footer>Updated on each scheduled scan (roughly every 15–30 min) · paper-trading simulation, no live orders placed</footer>
+    <footer>Updated on each scheduled scan, roughly every 15 min · paper-trading simulation only — no live orders placed</footer>
 
     <script>
     (function() {{
         var lastScan = new Date("{last_scan_iso}");
-        var intervalMs = 15 * 60 * 1000; // matches the cron schedule in scan.yml
+        var intervalMs = 15 * 60 * 1000; // matches the cron trigger interval
         var el = document.getElementById('countdown');
         if (!el || isNaN(lastScan.getTime())) return;
 
@@ -391,7 +442,7 @@ def render_dashboard(active_trades, last_scan, last_scan_iso):
             build_trade_card(sym, trade) for sym, trade in active_trades.items()
         ) + '</div>'
     else:
-        trades_html = '<p class="empty-state">No setups currently open. Next scheduled scan will check again.</p>'
+        trades_html = '<p class="empty-state">No setup clears the filters right now — displacement, FVG, H4 bias, and a 1:3 minimum all have to line up. Watching for the next 15-minute window.</p>'
 
     html = PAGE_TEMPLATE.format(
         stat_tiles=build_stat_tiles(len(active_trades), closed_count, wins, last_scan),
