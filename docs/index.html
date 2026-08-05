@@ -149,22 +149,22 @@
     <div class="stat-strip">
         
         <div class="stat-tile">
-            <span class="stat-value">2026-08-05 13:15:37 UTC</span>
+            <span class="stat-value">2026-08-05 13:30:38 UTC</span>
             <span class="stat-label">LAST SCAN</span>
         </div>
         
         <div class="stat-tile">
-            <span class="stat-value">2</span>
+            <span class="stat-value">1</span>
             <span class="stat-label">OPEN POSITIONS</span>
         </div>
         
         <div class="stat-tile">
-            <span class="stat-value">3</span>
+            <span class="stat-value">4</span>
             <span class="stat-label">CLOSED TRADES</span>
         </div>
         
         <div class="stat-tile">
-            <span class="stat-value">100.0%</span>
+            <span class="stat-value">75.0%</span>
             <span class="stat-label">WIN RATE</span>
         </div>
         
@@ -175,7 +175,7 @@
     </div>
 
     <section class="panel">
-        <div class="panel-title"><h2>Active setups</h2><span class="count">2 open</span></div>
+        <div class="panel-title"><h2>Active setups</h2><span class="count">1 open</span></div>
         <div class="trade-grid">
     <div class="trade-card">
         <div class="trade-card-head">
@@ -187,43 +187,32 @@
             <div class="ladder-track"></div>
             <div class="ladder-tick" style="left:16.67%"></div><div class="ladder-tick" style="left:33.33%"></div><div class="ladder-tick" style="left:50.00%"></div><div class="ladder-tick" style="left:66.67%"></div><div class="ladder-tick" style="left:83.33%"></div>
             <div class="ladder-marker entry" style="left:15.15%" title="Entry 597.0000"></div>
-            <div class="ladder-marker price" style="left:57.58%" title="Last checked 599.8000"></div>
+            <div class="ladder-marker price" style="left:54.55%" title="Last checked 599.6000"></div>
         </div>
         <div class="ladder-labels">
             <span class="lbl-sl">SL<br>596.0000</span>
             <span class="lbl-entry">ENTRY<br>597.0000</span>
             <span class="lbl-tp">TP<br>602.6000</span>
         </div>
-        <div class="trade-card-foot">Last checked 2026-08-05 13:15:37 UTC</div>
-    </div>
-    
-    <div class="trade-card">
-        <div class="trade-card-head">
-            <span class="ticker">XRP</span>
-            <span class="dir-tag dir-long">LONG</span>
-            <span class="rr-tag">R:R 1:5.1</span>
-        </div>
-        <div class="ladder">
-            <div class="ladder-track"></div>
-            <div class="ladder-tick" style="left:16.67%"></div><div class="ladder-tick" style="left:33.33%"></div><div class="ladder-tick" style="left:50.00%"></div><div class="ladder-tick" style="left:66.67%"></div><div class="ladder-tick" style="left:83.33%"></div>
-            <div class="ladder-marker entry" style="left:16.41%" title="Entry 1.0615"></div>
-            <div class="ladder-marker price" style="left:7.63%" title="Last checked 1.0604"></div>
-        </div>
-        <div class="ladder-labels">
-            <span class="lbl-sl">SL<br>1.0594</span>
-            <span class="lbl-entry">ENTRY<br>1.0615</span>
-            <span class="lbl-tp">TP<br>1.0725</span>
-        </div>
-        <div class="trade-card-foot">Last checked 2026-08-05 13:15:37 UTC</div>
+        <div class="trade-card-foot">Last checked 2026-08-05 13:30:38 UTC</div>
     </div>
     </div>
     </section>
 
     <section class="panel">
-        <div class="panel-title"><h2>Trade journal</h2><span class="count">last 8 of 8</span></div>
+        <div class="panel-title"><h2>Trade journal</h2><span class="count">last 9 of 9</span></div>
         <table>
             <tr><th>Time</th><th>Asset</th><th>Type</th><th>Entry</th><th>Outcome</th><th>Rationale</th></tr>
             
+        <tr>
+            <td class="mono">2026-08-05 13:30:38 UTC</td>
+            <td class="ticker-cell">XRP</td>
+            <td>LONG</td>
+            <td class="mono">1.0615</td>
+            <td><span class="pill pill-loss">LOSS</span></td>
+            <td class="rationale">Stop loss hit.</td>
+        </tr>
+        
         <tr>
             <td class="mono">2026-08-05 12:28:57 UTC</td>
             <td class="ticker-cell">LINK</td>
@@ -304,7 +293,7 @@
 
     <script>
     (function() {
-        var lastScan = new Date("2026-08-05T13:15:37Z");
+        var lastScan = new Date("2026-08-05T13:30:38Z");
         var intervalMs = 15 * 60 * 1000;
         var el = document.getElementById('countdown');
         if (!el || isNaN(lastScan.getTime())) return;
