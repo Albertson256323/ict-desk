@@ -1,10 +1,1 @@
-{
-  "BNB/USDT:USDT": {
-    "type": "LONG",
-    "entry": 597.0,
-    "stop_loss": 596.0,
-    "take_profit": 602.6,
-    "last_price": 600.4,
-    "last_check": "2026-08-05 14:45:29 UTC"
-  }
-}
+{}
