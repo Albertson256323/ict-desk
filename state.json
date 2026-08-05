@@ -4,15 +4,15 @@
     "entry": 597.0,
     "stop_loss": 596.0,
     "take_profit": 602.6,
-    "last_price": 599.0,
-    "last_check": "2026-08-05 12:30:41 UTC"
+    "last_price": 599.1,
+    "last_check": "2026-08-05 12:45:27 UTC"
   },
   "XRP/USDT:USDT": {
     "type": "LONG",
     "entry": 1.06155,
     "stop_loss": 1.0594,
     "take_profit": 1.0725,
-    "last_price": 1.067,
-    "last_check": "2026-08-05 12:30:41 UTC"
+    "last_price": 1.0648,
+    "last_check": "2026-08-05 12:45:27 UTC"
   }
 }
